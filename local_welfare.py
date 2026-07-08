@@ -3,10 +3,18 @@ import time
 import requests
 import xml.etree.ElementTree as ET
 from dotenv import load_dotenv
+from urllib.parse import unquote
 
 load_dotenv()
-SERVICE_KEY = os.environ["DATA_GO_KR_KEY"]
+SERVICE_KEY = unquote(os.environ["DATA_GO_KR_KEY"])
 BASE_URL = "https://apis.data.go.kr/B554287/LocalGovernmentWelfareInformations"
+
+
+def _get(url, params):
+    res = requests.get(url, params=params, timeout=30)
+    if not res.ok:
+        raise RuntimeError(f"API request failed: HTTP {res.status_code} {res.reason}")
+    return res.text
 
 
 def get_welfare_list(page_no=1, num_of_rows=10, search_word=""):
@@ -22,9 +30,7 @@ def get_welfare_list(page_no=1, num_of_rows=10, search_word=""):
     if search_word:
         params["searchWrd"] = search_word
 
-    res = requests.get(url, params=params, timeout=30)
-    res.raise_for_status()
-    return res.text
+    return _get(url, params)
 
 
 def get_welfare_detail(serv_id, retries=3):
@@ -37,9 +43,7 @@ def get_welfare_detail(serv_id, retries=3):
     }
     for attempt in range(retries):
         try:
-            res = requests.get(url, params=params, timeout=30)
-            res.raise_for_status()
-            return res.text
+            return _get(url, params)
         except requests.exceptions.ReadTimeout:
             if attempt < retries - 1:
                 time.sleep(3)
