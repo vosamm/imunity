@@ -2,13 +2,13 @@
 
 이 문서는 새 대화창이나 다른 작업자가 프로젝트를 이어받을 때 가장 먼저 확인하는 현재 상태 기록이다.
 
-마지막 업데이트: 2026-07-09
+마지막 업데이트: 2026-07-09 (자율 세션)
 
 ## Current Focus
 
-Phase 1 진입.
+Phase 2 진입 (Phase 0·1 게이트 통과).
 
-현재 초점은 공통 데이터 스키마 구현과 로컬 저장 구조 설계다.
+현재 초점은 암환자 관련성 키워드 분류(`classify.py`)와 골든 케이스 통과다.
 
 ## Active Ownership
 
@@ -54,9 +54,16 @@ Phase 1 진입.
   - 가드레일: `raw_cache.py` (API 원문 캐시, 쿼터 보호), `MISTRAL_MAX_CALLS` 호출 상한
   - 실행 규칙/Phase 게이트/아침 체크포인트: `docs/AUTONOMOUS_RUN.md`
 
+## 자율 세션 진행 (2026-07-09)
+
+- Phase 0 (초기 수집, 실 API 1회): `collect_raw.py` 작성. 중앙/지자체 각 **99건** 원문 XML을 `data/raw/`에 캐시. 게이트(각 50건 이상) PASS.
+- Phase 1 (공통 스키마 + SQLite): `schema.py`(`normalize_national`/`normalize_local`), `storage.py`(`init_db`/`upsert_services`/`count_services`/`get_service`/`all_services`) 구현.
+  - `acceptance_tests/test_phase1_schema_storage.py` 11건 통과, 단위 테스트 17건 GREEN 유지.
+  - `build_db.py`로 캐시 전체 정규화 → `data/welfare.db` 생성 (총 **198건**).
+
 ## In Progress
 
-- 자율 개발 세션 실행 대기 (Phase 0 초기 수집부터)
+- Phase 2: `classify.py` 구현 및 골든 케이스 통과
 
 ## Next
 
