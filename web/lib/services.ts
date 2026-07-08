@@ -23,6 +23,7 @@ export type Service = {
   ministry: string | null;
   region_sido: string | null;
   region_sigungu: string | null;
+  support_categories: string[];
   cancer_relevance: string | null;
   cancer_relevance_reason: string | null;
 };
@@ -31,9 +32,18 @@ export type ServiceQuery = {
   q?: string;
   sido?: string;
   sigungu?: string;
+  // 목적형 카테고리 (schema.SUPPORT_CATEGORIES와 1:1).
+  category?: string;
   // 노출할 관련성 등급 (기본: exclude 제외).
   levels?: string[];
   limit?: number;
+  offset?: number;
+};
+
+export type SearchResult = {
+  // 필터 적용 후 전체 건수 (페이지네이션 기준).
+  total: number;
+  results: Service[];
 };
 
 let _db: Database.Database | null = null;
@@ -49,14 +59,17 @@ function db(): Database.Database {
   return _db;
 }
 
-function rowToService(row: Record<string, unknown>): Service {
-  let links: string[] = [];
+function parseJsonArray(value: unknown): string[] {
   try {
-    const parsed = JSON.parse((row.links as string) ?? "[]");
-    if (Array.isArray(parsed)) links = parsed as string[];
+    const parsed = JSON.parse((value as string) ?? "[]");
+    return Array.isArray(parsed) ? (parsed as string[]) : [];
   } catch {
-    links = [];
+    return [];
   }
+}
+
+function rowToService(row: Record<string, unknown>): Service {
+  const links = parseJsonArray(row.links);
   return {
     source_type: row.source_type as string,
     source_service_id: row.source_service_id as string,
@@ -71,6 +84,7 @@ function rowToService(row: Record<string, unknown>): Service {
     ministry: (row.ministry as string) ?? null,
     region_sido: (row.region_sido as string) ?? null,
     region_sigungu: (row.region_sigungu as string) ?? null,
+    support_categories: parseJsonArray(row.support_categories),
     cancer_relevance: (row.cancer_relevance as string) ?? null,
     cancer_relevance_reason: (row.cancer_relevance_reason as string) ?? null,
   };
@@ -83,7 +97,7 @@ const RELEVANCE_RANK: Record<string, number> = {
   exclude: 3,
 };
 
-export function searchServices(query: ServiceQuery): Service[] {
+export function searchServices(query: ServiceQuery): SearchResult {
   const rows = db()
     .prepare("SELECT * FROM welfare_services")
     .all() as Record<string, unknown>[];
@@ -122,6 +136,14 @@ export function searchServices(query: ServiceQuery): Service[] {
     );
   }
 
+  // 카테고리 필터: 환자의 목적(치료비/간병 등) 기준 원터치 필터.
+  const category = (query.category ?? "").trim();
+  if (category) {
+    services = services.filter((s) =>
+      s.support_categories.includes(category)
+    );
+  }
+
   services.sort((a, b) => {
     const ra = RELEVANCE_RANK[a.cancer_relevance ?? "exclude"] ?? 3;
     const rb = RELEVANCE_RANK[b.cancer_relevance ?? "exclude"] ?? 3;
@@ -129,8 +151,10 @@ export function searchServices(query: ServiceQuery): Service[] {
     return (a.title ?? "").localeCompare(b.title ?? "", "ko");
   });
 
+  const total = services.length;
+  const offset = query.offset && query.offset > 0 ? query.offset : 0;
   const limit = query.limit && query.limit > 0 ? query.limit : 100;
-  return services.slice(0, limit);
+  return { total, results: services.slice(offset, offset + limit) };
 }
 
 export function getService(
@@ -152,4 +176,13 @@ export function listSido(): string[] {
     )
     .all() as { region_sido: string }[];
   return rows.map((r) => r.region_sido);
+}
+
+export function listSigungu(sido: string): string[] {
+  const rows = db()
+    .prepare(
+      "SELECT DISTINCT region_sigungu FROM welfare_services WHERE region_sido = ? AND region_sigungu IS NOT NULL ORDER BY region_sigungu"
+    )
+    .all(sido) as { region_sigungu: string }[];
+  return rows.map((r) => r.region_sigungu);
 }

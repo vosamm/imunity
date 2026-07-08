@@ -6,9 +6,19 @@
 
 ## Current Focus
 
-Phase 0~3 전 단계 게이트 통과. 아침 체크포인트(사람 검토) 대기.
+Phase 0~3 게이트 + 자율 개선 루프 1회차(`docs/TEST_PLAN.md`) 완료. 아침 체크포인트(사람 검토) 대기.
 
 다음 초점은 `data/review_samples.md` 30건 사람 검토와 웹 MVP 로컬 확인이다.
+
+## 자율 개선 루프 1회차 (2026-07-09, TEST_PLAN 기준)
+
+과금 0 (Mistral/실 API 호출 없음, 캐시만 사용).
+
+- `docs/TEST_PLAN.md`: AI가 설계한 상위 검증 계층 (Python 12항목, 웹 12항목, 보안 4게이트, E2E 10시나리오).
+- `schema.py`: `support_categories` 목적형 카테고리 파생 (의료비/생계/돌봄·간병/심리지원/이동·교통/주거/현물·물품).
+- 웹 UX (환자 최우선 결정 기록은 TEST_PLAN 6장): 시군구 필터(시도 종속), "어떤 도움이 필요하세요?" 카테고리 칩, 더보기 페이지네이션(30건 단위, total 표기), ESC 닫기+포커스 복귀, aria-live 결과 안내, 검색 디바운스, 빈 결과 초기화 버튼, `/api/regions` 신설, limit clamp(500).
+- 테스트: Python 42건 + 수락 16건 + 웹 vitest 23건 = **81건 GREEN**. 보안 게이트 SEC-01~04 PASS. E2E 10시나리오 PASS (스크린샷 9장, 콘솔 에러 0).
+- 실행: `bash scripts/run_all_tests.sh`
 
 ## Active Ownership
 

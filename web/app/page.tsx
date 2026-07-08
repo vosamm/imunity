@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 type Service = {
   source_type: string;
@@ -16,6 +16,7 @@ type Service = {
   ministry: string | null;
   region_sido: string | null;
   region_sigungu: string | null;
+  support_categories: string[];
   cancer_relevance: string | null;
   cancer_relevance_reason: string | null;
 };
@@ -25,6 +26,13 @@ const LEVELS = [
   { key: "medium", label: "관련 있음" },
   { key: "low", label: "확인 필요" },
 ];
+
+// schema.SUPPORT_CATEGORIES와 1:1 (이름 변경 시 양쪽 함께).
+const CATEGORIES = [
+  "의료비", "생계", "돌봄·간병", "심리지원", "이동·교통", "주거", "현물·물품",
+];
+
+const PAGE_SIZE = 30;
 
 // 확정 표현 금지 (PRODUCT_SPEC 7장). "대상일 수 있음 / 확인 필요"만 사용한다.
 function badge(level: string | null): { cls: string; text: string } {
@@ -41,12 +49,18 @@ function regionText(s: Service): string {
 export default function Home() {
   const [q, setQ] = useState("");
   const [sido, setSido] = useState("");
+  const [sigungu, setSigungu] = useState("");
+  const [category, setCategory] = useState("");
   const [sidoOptions, setSidoOptions] = useState<string[]>([]);
+  const [sigunguOptions, setSigunguOptions] = useState<string[]>([]);
   const [levels, setLevels] = useState<string[]>(["high", "medium", "low"]);
   const [results, setResults] = useState<Service[]>([]);
-  const [count, setCount] = useState(0);
-  const [loading, setLoading] = useState(false);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [selected, setSelected] = useState<Service | null>(null);
+  // 상세를 연 카드로 포커스를 되돌리기 위한 참조 (키보드 사용자 배려).
+  const lastCardRef = useRef<HTMLElement | null>(null);
   // 개발/QA 전용 표시 모드. URL에 ?debug=1 이 있을 때만 분류 근거를 화면에 보여준다.
   const [debug, setDebug] = useState(false);
 
@@ -55,49 +69,111 @@ export default function Home() {
     setDebug(params.get("debug") === "1");
   }, []);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    const params = new URLSearchParams();
-    if (q.trim()) params.set("q", q.trim());
-    if (sido) params.set("sido", sido);
-    if (levels.length) params.set("relevance", levels.join(","));
-    params.set("limit", "100");
-    try {
-      const res = await fetch(`/api/services?${params.toString()}`);
-      const data = await res.json();
-      setResults(data.results ?? []);
-      setCount(data.count ?? 0);
-    } catch {
-      setResults([]);
-      setCount(0);
-    } finally {
-      setLoading(false);
-    }
-  }, [q, sido, levels]);
+  const buildParams = useCallback(
+    (offset: number) => {
+      const params = new URLSearchParams();
+      if (q.trim()) params.set("q", q.trim());
+      if (sido) params.set("sido", sido);
+      if (sigungu) params.set("sigungu", sigungu);
+      if (category) params.set("category", category);
+      if (levels.length) params.set("relevance", levels.join(","));
+      params.set("limit", String(PAGE_SIZE));
+      if (offset > 0) params.set("offset", String(offset));
+      return params;
+    },
+    [q, sido, sigungu, category, levels]
+  );
 
+  // 검색 조건 변경 → 첫 페이지 재조회 (타이핑 부담을 줄이려 300ms 디바운스).
   useEffect(() => {
-    // 시도 옵션 로드 (지역 필터용).
-    fetch("/api/services?relevance=high,medium,low,exclude&limit=1000")
+    let cancelled = false;
+    setLoading(true);
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/services?${buildParams(0).toString()}`);
+        const data = await res.json();
+        if (cancelled) return;
+        setResults(data.results ?? []);
+        setTotal(data.total ?? 0);
+      } catch {
+        if (!cancelled) {
+          setResults([]);
+          setTotal(0);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }, 300);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [buildParams]);
+
+  // 시도 옵션 로드.
+  useEffect(() => {
+    fetch("/api/regions")
       .then((r) => r.json())
-      .then((d: { results: Service[] }) => {
-        const set = new Set<string>();
-        (d.results ?? []).forEach((s) => {
-          if (s.region_sido) set.add(s.region_sido);
-        });
-        setSidoOptions(Array.from(set).sort((a, b) => a.localeCompare(b, "ko")));
-      })
+      .then((d: { sido: string[] }) => setSidoOptions(d.sido ?? []))
       .catch(() => {});
   }, []);
 
+  // 시도 변경 → 시군구 옵션 갱신, 기존 시군구 선택 해제.
   useEffect(() => {
-    load();
-  }, [load]);
+    setSigungu("");
+    if (!sido) {
+      setSigunguOptions([]);
+      return;
+    }
+    fetch(`/api/regions?sido=${encodeURIComponent(sido)}`)
+      .then((r) => r.json())
+      .then((d: { sigungu: string[] }) => setSigunguOptions(d.sigungu ?? []))
+      .catch(() => setSigunguOptions([]));
+  }, [sido]);
+
+  async function loadMore() {
+    setLoadingMore(true);
+    try {
+      const res = await fetch(
+        `/api/services?${buildParams(results.length).toString()}`
+      );
+      const data = await res.json();
+      setResults((prev) => [...prev, ...(data.results ?? [])]);
+      setTotal(data.total ?? total);
+    } catch {
+      // 더보기 실패는 기존 결과 유지
+    } finally {
+      setLoadingMore(false);
+    }
+  }
 
   function toggleLevel(key: string) {
     setLevels((prev) =>
       prev.includes(key) ? prev.filter((l) => l !== key) : [...prev, key]
     );
   }
+
+  function resetFilters() {
+    setQ("");
+    setSido("");
+    setSigungu("");
+    setCategory("");
+    setLevels(["high", "medium", "low"]);
+  }
+
+  function openDetail(s: Service, cardEl: HTMLElement) {
+    lastCardRef.current = cardEl;
+    setSelected(s);
+  }
+
+  function closeDetail() {
+    setSelected(null);
+    // 열었던 카드로 포커스 복귀 (키보드/스크린리더 사용자).
+    lastCardRef.current?.focus();
+  }
+
+  const hasActiveFilter =
+    q.trim() || sido || sigungu || category || levels.length !== 3;
 
   return (
     <main className="wrap">
@@ -115,7 +191,7 @@ export default function Home() {
 
       <section className="filters" aria-label="검색 및 필터">
         <div className="row">
-          <div className="field" style={{ flex: "2 1 260px" }}>
+          <div className="field" style={{ flex: "2 1 240px" }}>
             <label htmlFor="q">검색어</label>
             <input
               id="q"
@@ -123,16 +199,11 @@ export default function Home() {
               placeholder="예: 암, 의료비, 간병, 치료비"
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && load()}
             />
           </div>
           <div className="field">
             <label htmlFor="sido">지역 (시도)</label>
-            <select
-              id="sido"
-              value={sido}
-              onChange={(e) => setSido(e.target.value)}
-            >
+            <select id="sido" value={sido} onChange={(e) => setSido(e.target.value)}>
               <option value="">전체 (중앙부처 포함)</option>
               {sidoOptions.map((s) => (
                 <option key={s} value={s}>
@@ -141,7 +212,43 @@ export default function Home() {
               ))}
             </select>
           </div>
+          <div className="field">
+            <label htmlFor="sigungu">시군구</label>
+            <select
+              id="sigungu"
+              value={sigungu}
+              onChange={(e) => setSigungu(e.target.value)}
+              disabled={!sido || sigunguOptions.length === 0}
+            >
+              <option value="">
+                {sido ? "전체" : "시도를 먼저 선택"}
+              </option>
+              {sigunguOptions.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
+
+        <div className="field">
+          <label>어떤 도움이 필요하세요?</label>
+          <div className="chips" role="group" aria-label="지원 목적 필터">
+            {CATEGORIES.map((cat) => (
+              <button
+                key={cat}
+                type="button"
+                className="chip"
+                aria-pressed={category === cat}
+                onClick={() => setCategory((prev) => (prev === cat ? "" : cat))}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="field">
           <label>관련성</label>
           <div className="chips" role="group" aria-label="관련성 필터">
@@ -160,52 +267,77 @@ export default function Home() {
         </div>
       </section>
 
-      <p className="result-meta">
-        {loading ? "불러오는 중…" : `검색 결과 ${count}건`}
-        {sido ? ` · 지역: ${sido} (+ 전국 제도)` : ""}
+      <p className="result-meta" role="status" aria-live="polite">
+        {loading
+          ? "불러오는 중…"
+          : `검색 결과 ${total}건${results.length < total ? ` (${results.length}건 표시)` : ""}`}
+        {sido ? ` · 지역: ${sido}${sigungu ? ` ${sigungu}` : ""} (+ 전국 제도)` : ""}
+        {category ? ` · 목적: ${category}` : ""}
       </p>
 
       {!loading && results.length === 0 ? (
         <div className="empty">
-          조건에 맞는 제도를 찾지 못했습니다. 검색어나 필터를 조정해 보세요.
+          <p>조건에 맞는 제도를 찾지 못했습니다.</p>
+          <p className="empty-hint">
+            검색어를 줄이거나 필터를 풀면 더 많은 제도가 보입니다.
+          </p>
+          {hasActiveFilter ? (
+            <button type="button" className="reset-btn" onClick={resetFilters}>
+              필터 모두 초기화
+            </button>
+          ) : null}
         </div>
       ) : (
-        <div className="list">
-          {results.map((s) => {
-            const b = badge(s.cancer_relevance);
-            return (
-              <button
-                key={`${s.source_type}:${s.source_service_id}`}
-                className="card"
-                onClick={() => setSelected(s)}
-              >
-                <div className="card-top">
-                  <h3>{s.title ?? "(제목 없음)"}</h3>
-                  <span className={`badge ${b.cls}`}>{b.text}</span>
-                </div>
-                {s.summary ? <p className="summary">{s.summary}</p> : null}
-                <div className="meta-row">
-                  <span className="source-tag">
-                    {s.source_type === "national" ? "중앙부처" : "지자체"}
-                  </span>
-                  <span>{regionText(s)}</span>
-                  {s.ministry ? <span>{s.ministry}</span> : null}
-                  {debug ? (
-                    <span className="dev-tag">dev:{s.cancer_relevance}</span>
-                  ) : null}
-                </div>
-              </button>
-            );
-          })}
-        </div>
+        <>
+          <div className="list">
+            {results.map((s) => {
+              const b = badge(s.cancer_relevance);
+              return (
+                <button
+                  key={`${s.source_type}:${s.source_service_id}`}
+                  className="card"
+                  onClick={(e) => openDetail(s, e.currentTarget)}
+                >
+                  <div className="card-top">
+                    <h3>{s.title ?? "(제목 없음)"}</h3>
+                    <span className={`badge ${b.cls}`}>{b.text}</span>
+                  </div>
+                  {s.summary ? <p className="summary">{s.summary}</p> : null}
+                  <div className="meta-row">
+                    <span className="source-tag">
+                      {s.source_type === "national" ? "중앙부처" : "지자체"}
+                    </span>
+                    <span>{regionText(s)}</span>
+                    {s.support_categories.slice(0, 3).map((c) => (
+                      <span key={c} className="cat-tag">
+                        {c}
+                      </span>
+                    ))}
+                    {debug ? (
+                      <span className="dev-tag">dev:{s.cancer_relevance}</span>
+                    ) : null}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+          {results.length < total ? (
+            <button
+              type="button"
+              className="load-more"
+              onClick={loadMore}
+              disabled={loadingMore}
+            >
+              {loadingMore
+                ? "불러오는 중…"
+                : `더 보기 (${results.length}/${total})`}
+            </button>
+          ) : null}
+        </>
       )}
 
       {selected ? (
-        <Detail
-          service={selected}
-          debug={debug}
-          onClose={() => setSelected(null)}
-        />
+        <Detail service={selected} debug={debug} onClose={closeDetail} />
       ) : null}
     </main>
   );
@@ -234,6 +366,18 @@ function Detail({
   onClose: () => void;
 }) {
   const b = badge(service.cancer_relevance);
+  const closeRef = useRef<HTMLButtonElement | null>(null);
+
+  // 드로어가 열리면 닫기 버튼으로 포커스 이동, ESC로 닫기 (접근성).
+  useEffect(() => {
+    closeRef.current?.focus();
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
   return (
     <div className="overlay" onClick={onClose}>
       <div
@@ -241,8 +385,14 @@ function Detail({
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
+        aria-label={service.title ?? "제도 상세"}
       >
-        <button className="drawer-close" onClick={onClose} aria-label="닫기">
+        <button
+          ref={closeRef}
+          className="drawer-close"
+          onClick={onClose}
+          aria-label="닫기"
+        >
           ×
         </button>
         <span className={`badge ${b.cls}`}>{b.text}</span>
@@ -253,6 +403,11 @@ function Detail({
           </span>
           <span>{regionText(service)}</span>
           {service.ministry ? <span>{service.ministry}</span> : null}
+          {service.support_categories.map((c) => (
+            <span key={c} className="cat-tag">
+              {c}
+            </span>
+          ))}
         </div>
 
         <Field label="지원 대상" value={service.target} />

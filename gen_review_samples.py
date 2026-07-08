@@ -37,8 +37,8 @@ def _pick(rows):
     return picked[:30]
 
 
-def main():
-    rows = storage.all_services(DB_PATH)
+def main(db_path=DB_PATH, out_path=OUT_PATH):
+    rows = storage.all_services(db_path)
     picked = _pick(rows)
 
     lines = [
@@ -62,10 +62,11 @@ def main():
         )
     lines.append("")
 
-    os.makedirs(os.path.dirname(OUT_PATH), exist_ok=True)
-    with open(OUT_PATH, "w", encoding="utf-8") as f:
+    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+    with open(out_path, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
-    print(f"생성 완료: {OUT_PATH} ({len(picked)}건)")
+    print(f"생성 완료: {out_path} ({len(picked)}건)")
+    return out_path
 
 
 if __name__ == "__main__":

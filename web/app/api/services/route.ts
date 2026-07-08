@@ -13,17 +13,25 @@ export function GET(req: NextRequest) {
     : undefined;
 
   const limitParam = sp.get("limit");
-  const limit = limitParam ? parseInt(limitParam, 10) : undefined;
+  const limitRaw = limitParam ? parseInt(limitParam, 10) : NaN;
+  // 방어: 숫자가 아니거나 음수면 기본값, 과도한 값은 상한으로 clamp.
+  const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? Math.min(limitRaw, 500) : undefined;
+
+  const offsetParam = sp.get("offset");
+  const offsetRaw = offsetParam ? parseInt(offsetParam, 10) : NaN;
+  const offset = Number.isFinite(offsetRaw) && offsetRaw > 0 ? offsetRaw : undefined;
 
   try {
-    const results = searchServices({
+    const { total, results } = searchServices({
       q: sp.get("q") ?? undefined,
       sido: sp.get("sido") ?? undefined,
       sigungu: sp.get("sigungu") ?? undefined,
+      category: sp.get("category") ?? undefined,
       levels,
-      limit: Number.isFinite(limit as number) ? limit : undefined,
+      limit,
+      offset,
     });
-    return NextResponse.json({ count: results.length, results });
+    return NextResponse.json({ count: results.length, total, results });
   } catch (err) {
     // 오류 메시지에 경로/키 등 민감정보를 그대로 노출하지 않는다.
     const message =
