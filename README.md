@@ -1,8 +1,10 @@
 # imunity
 
-암환우 AI 복지 매칭 서비스를 위한 데이터 수집/전처리 프로토타입입니다.
+암환자가 자신에게 맞는 중앙부처/지자체 공공 복지 정보를 쉬운 필터링으로 한눈에 볼 수 있게 하는 웹서비스 프로젝트입니다.
 
-현재는 웹앱이 아니라 Python 스크립트 기반입니다. 중앙부처/지자체 복지서비스 API에서 데이터를 가져오고, Mistral API로 주요 항목을 구조화하는 흐름을 목표로 합니다.
+현재는 웹앱이 아니라 Python 스크립트 기반 데이터 수집/전처리 프로토타입입니다. 중앙부처/지자체 복지서비스 API에서 데이터를 가져오고, Mistral API로 주요 항목을 구조화하는 흐름을 목표로 합니다.
+
+저장소 문서가 현재 개발 기준입니다. 외부 기획 링크나 대화 내용은 참고 자료이며, 확정된 내용은 `docs/` 아래 문서로 옮긴 뒤 작업합니다.
 
 ## 현재 상태
 
@@ -21,6 +23,21 @@
 | `local_preprocess.py` | 지자체 복지서비스 상세 정보 전처리 |
 | `CLAUDE.md` | 프로젝트 규칙, 보안 기준, 현재 상태 문서 |
 | `requirements.txt` | Python 의존성 |
+| `docs/` | 제품, 아키텍처, 데이터, 보안, AI 협업, 로드맵 문서 |
+
+## 문서
+
+작업 전 [docs/INDEX.md](./docs/INDEX.md)를 먼저 확인합니다.
+
+| 문서 | 설명 |
+|---|---|
+| [docs/PRODUCT_SPEC.md](./docs/PRODUCT_SPEC.md) | 제품 목적, 사용자, MVP 범위 |
+| [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | 목표 시스템 구조 |
+| [docs/DATA_PIPELINE.md](./docs/DATA_PIPELINE.md) | 데이터 수집/정규화/AI 전처리 기준 |
+| [docs/SECURITY_PRIVACY.md](./docs/SECURITY_PRIVACY.md) | 보안과 개인정보 보호 기준 |
+| [docs/AI_COLLABORATION.md](./docs/AI_COLLABORATION.md) | AI 협업 작업 규칙 |
+| [docs/ROADMAP.md](./docs/ROADMAP.md) | 단계별 구현 계획 |
+| [docs/STATUS.md](./docs/STATUS.md) | 현재 진척도, 담당, 다음 작업 |
 
 ## 보안 원칙
 
@@ -65,6 +82,7 @@ python3 -m venv .venv
 ## 다음 작업
 
 1. Mistral 전처리 파이프라인을 중앙/지자체 각 1건씩 검증
-2. 암환우 관련성 필터링 기준 정의
-3. 수집 결과 저장 구조 설계
-4. 웹앱 골격 추가
+2. 공통 데이터 스키마 구현
+3. 암환우 관련성 필터링 기준 검증
+4. 수집 결과 저장 구조 설계
+5. 웹앱 골격 추가
