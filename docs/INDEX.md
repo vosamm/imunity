@@ -17,6 +17,7 @@
 | [DATA_PIPELINE.md](./DATA_PIPELINE.md) | 공공 API 수집, 정규화, AI 전처리, 저장 흐름 |
 | [SECURITY_PRIVACY.md](./SECURITY_PRIVACY.md) | API 키, 로그, 개인정보/민감정보 보호 기준 |
 | [AI_COLLABORATION.md](./AI_COLLABORATION.md) | AI/개발자가 이어서 작업할 때 지켜야 할 협업 규칙 |
+| [GIT_WORKFLOW.md](./GIT_WORKFLOW.md) | 개인 브랜치, main 보호, 커밋/푸시/PR 규칙 |
 | [ROADMAP.md](./ROADMAP.md) | 단계별 구현 순서와 완료 기준 |
 | [STATUS.md](./STATUS.md) | 현재 진척도, 담당, 다음 작업, handoff prompt |
 
@@ -25,7 +26,7 @@
 - Python 스크립트 기반 데이터 수집/전처리 프로토타입이다.
 - 중앙부처 복지서비스 API 1건 조회를 확인했다.
 - 지자체 복지서비스 API 1건 조회를 확인했다.
-- Mistral 전처리 코드는 있으나 중앙/지자체 각 1건 실행 검증은 아직 필요하다.
+- Mistral 전처리 코드는 있으며 중앙/지자체 각 1건 실행 검증을 완료했다.
 - 웹 프론트엔드, API 서버, DB, 인증, 배포 설정은 아직 없다.
 
 ## 문서 변경 원칙
