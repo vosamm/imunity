@@ -38,7 +38,8 @@
 - 실패 단계
 - 재시도 횟수
 
-현재 `national_welfare.py`, `local_welfare.py`는 HTTP 오류 시 전체 URL 대신 상태 코드와 reason만 출력하도록 변경되어 있다.
+현재 `national_welfare.py`, `local_welfare.py`는 HTTP 오류와 연결 오류 시 전체 URL 대신
+상태 코드, reason, 실패 유형만 출력하도록 변경되어 있다.
 
 ## 4. 개인정보 최소 수집
 

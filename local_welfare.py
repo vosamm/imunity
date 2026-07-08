@@ -10,11 +10,25 @@ SERVICE_KEY = unquote(os.environ["DATA_GO_KR_KEY"])
 BASE_URL = "https://apis.data.go.kr/B554287/LocalGovernmentWelfareInformations"
 
 
-def _get(url, params):
-    res = requests.get(url, params=params, timeout=30)
-    if not res.ok:
-        raise RuntimeError(f"API request failed: HTTP {res.status_code} {res.reason}")
-    return res.text
+def _get(url, params, retries=1):
+    for attempt in range(retries):
+        try:
+            res = requests.get(url, params=params, timeout=30)
+        except requests.exceptions.ReadTimeout:
+            if attempt < retries - 1:
+                time.sleep(3)
+                continue
+            raise RuntimeError(f"API request timed out after {retries} attempt(s)") from None
+        except requests.exceptions.RequestException as exc:
+            raise RuntimeError(
+                f"API request failed before response: {exc.__class__.__name__}"
+            ) from None
+
+        if not res.ok:
+            raise RuntimeError(f"API request failed: HTTP {res.status_code} {res.reason}")
+        return res.text
+
+    raise RuntimeError("API request failed: retry loop exhausted")
 
 
 def get_welfare_list(page_no=1, num_of_rows=10, search_word=""):
@@ -41,14 +55,7 @@ def get_welfare_detail(serv_id, retries=3):
         "callTp": "D",
         "servId": serv_id,
     }
-    for attempt in range(retries):
-        try:
-            return _get(url, params)
-        except requests.exceptions.ReadTimeout:
-            if attempt < retries - 1:
-                time.sleep(3)
-            else:
-                raise
+    return _get(url, params, retries=retries)
 
 
 def iter_details(total=20, page_size=10):
