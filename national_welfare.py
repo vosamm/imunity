@@ -10,25 +10,44 @@ SERVICE_KEY = unquote(os.environ["DATA_GO_KR_KEY"])
 BASE_URL = "https://apis.data.go.kr/B554287/NationalWelfareInformationsV001"
 
 
-def _get(url, params, retries=1):
+def _get(url, params, retries=3):
+    """GET 요청. 타임아웃/연결오류/5xx는 최대 retries회 재시도, 4xx는 즉시 실패.
+
+    예외 메시지에 URL과 query string을 포함하지 않는다 (API 키 노출 방지).
+    """
+    last_error = "unknown"
     for attempt in range(retries):
         try:
             res = requests.get(url, params=params, timeout=30)
-        except requests.exceptions.ReadTimeout:
+        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as exc:
+            last_error = exc.__class__.__name__
             if attempt < retries - 1:
                 time.sleep(3)
-                continue
-            raise RuntimeError(f"API request timed out after {retries} attempt(s)") from None
+            continue
         except requests.exceptions.RequestException as exc:
             raise RuntimeError(
                 f"API request failed before response: {exc.__class__.__name__}"
             ) from None
 
+        if res.status_code >= 500:
+            last_error = f"HTTP {res.status_code} {res.reason}"
+            if attempt < retries - 1:
+                time.sleep(3)
+            continue
         if not res.ok:
             raise RuntimeError(f"API request failed: HTTP {res.status_code} {res.reason}")
         return res.text
 
-    raise RuntimeError("API request failed: retry loop exhausted")
+    raise RuntimeError(f"API request failed after {retries} attempt(s): {last_error}")
+
+
+def _raise_on_api_error(root):
+    """공공데이터포털이 HTTP 200으로 돌려주는 에러 XML(쿼터 초과, 키 오류 등)을 감지한다."""
+    if root.tag == "OpenAPI_ServiceResponse":
+        err_msg = root.findtext(".//errMsg", "")
+        auth_msg = root.findtext(".//returnAuthMsg", "")
+        reason_code = root.findtext(".//returnReasonCode", "")
+        raise RuntimeError(f"API error response: {err_msg} {auth_msg} (code {reason_code})")
 
 
 def get_welfare_list(page_no=1, num_of_rows=10, search_word=""):
@@ -61,6 +80,7 @@ def get_welfare_detail(serv_id, retries=3):
 def parse_list(xml_text):
     """목록에서 servId, servNm, 소관부처명 추출"""
     root = ET.fromstring(xml_text)
+    _raise_on_api_error(root)
     items = []
     for item in root.iter("servList"):
         serv_id = item.findtext("servId", "")
@@ -73,6 +93,7 @@ def parse_list(xml_text):
 def parse_detail(xml_text):
     """상세조회에서 실용적인 필드 추출"""
     root = ET.fromstring(xml_text)
+    _raise_on_api_error(root)
 
     # 단일 텍스트 필드
     result = {
@@ -124,20 +145,25 @@ def iter_details(total=20, page_size=10):
           meta   - {"servId", "servNm", "ministry"}
           detail - parse_detail() 결과 dict
     """
-    fetched = 0
+    yielded = 0
     page_no = 1
-    while fetched < total:
-        rows = min(page_size, total - fetched)
-        list_xml = get_welfare_list(page_no=page_no, num_of_rows=rows)
+    while yielded < total:
+        # pageNo는 numOfRows 기준으로 계산되므로 요청 크기를 항상 page_size로 고정한다.
+        # 마지막 페이지에서 크기를 줄이면 이미 받은 구간을 다시 받는다.
+        list_xml = get_welfare_list(page_no=page_no, num_of_rows=page_size)
         services = parse_list(list_xml)
         if not services:
             break
         for meta in services:
-            detail_xml = get_welfare_detail(meta["servId"])
-            yield meta, parse_detail(detail_xml)
-            fetched += 1
-            if fetched >= total:
-                break
+            try:
+                detail = parse_detail(get_welfare_detail(meta["servId"]))
+            except Exception as exc:
+                print(f"  [skip] {meta['servId']} 상세 처리 실패: {exc}")
+                continue
+            yield meta, detail
+            yielded += 1
+            if yielded >= total:
+                return
         page_no += 1
 
 

@@ -40,6 +40,13 @@ Phase 1 진입.
   - 서비스명: 학교 밖 청소년 검정고시 합격 축하금 지원
   - 결과: JSON 파싱 성공
 - 네트워크 연결 오류 시 `requests` 기본 traceback이 API 키가 포함된 요청 URL을 노출할 수 있는 문제 수정
+- 수집 코드 버그 수정 및 테스트 추가 (2026-07-09, 프로젝트 전체 리뷰 후속)
+  - `iter_details` 페이지네이션 버그 수정: total이 page_size 배수가 아니면 중복 수집/누락 발생하던 문제
+  - 상세 조회/파싱 실패 레코드 스킵 처리 (전체 배치 중단 방지, CLAUDE.md 2.3 준수)
+  - HTTP 200 + `OpenAPI_ServiceResponse` 에러 XML(쿼터 초과, 키 오류) 감지 추가
+  - 재시도 정책 통일: 목록/상세 모두 기본 3회, 타임아웃·연결오류·5xx 재시도, 4xx 즉시 실패
+  - 전처리 결과 `data/*.json` 저장 추가 (Mistral 비용 보존, `data/`는 gitignore)
+  - `tests/` unittest 11건 추가 (네트워크 스텁 기반, API 키 불필요)
 
 ## In Progress
 

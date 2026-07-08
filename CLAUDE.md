@@ -28,8 +28,9 @@
 |---|---|---|
 | `national_welfare.py` | 중앙부처 복지서비스 API 목록/상세 조회 및 XML 파싱 | 1건 조회 검증 완료 |
 | `local_welfare.py` | 지자체 복지서비스 API 목록/상세 조회 및 XML 파싱 | 1건 조회 검증 완료 |
-| `national_preprocess.py` | 중앙부처 상세 데이터를 Mistral로 구조화 JSON 전처리 | 구현됨, 소량 실행 검증 필요 |
-| `local_preprocess.py` | 지자체 상세 데이터를 Mistral로 구조화 JSON 전처리 | 구현됨, 소량 실행 검증 필요 |
+| `national_preprocess.py` | 중앙부처 상세 데이터를 Mistral로 구조화 JSON 전처리 후 `data/`에 저장 | 1건 실행 검증 완료 |
+| `local_preprocess.py` | 지자체 상세 데이터를 Mistral로 구조화 JSON 전처리 후 `data/`에 저장 | 1건 실행 검증 완료 |
+| `tests/` | 수집/전처리 로직 unittest (네트워크 스텁 기반, API 키 불필요) | 11건 통과 |
 | `requirements.txt` | Python 실행 의존성 | `requests`, `python-dotenv` |
 
 ### 0.2 아직 구현되지 않은 범위
@@ -168,9 +169,17 @@ python3 -m venv .venv
 
 ---
 
+### 7.4 단위 테스트 실행
+
+네트워크 호출 없이 수집/전처리 로직을 검증한다. 실제 API 키가 필요 없다.
+
+```bash
+DATA_GO_KR_KEY=dummy MISTRAL_API_KEY=dummy .venv/bin/python -m unittest discover -s tests -t .
+```
+
 ## 8. 다음 작업 우선순위
 
-1. Mistral 전처리 파이프라인을 중앙/지자체 각 1건씩 실행 검증
+1. ~~Mistral 전처리 파이프라인을 중앙/지자체 각 1건씩 실행 검증~~ (완료, `docs/DATA_PIPELINE.md` 8장)
 2. 전체 배치 전에 소량 배치 기준 수립
 3. 암환우 관련성 필터링 기준 확정
 4. 저장 구조 설계

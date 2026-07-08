@@ -79,6 +79,12 @@ python3 -m venv .venv
 .venv/bin/python -c "import local_welfare; services = local_welfare.parse_list(local_welfare.get_welfare_list(page_no=1, num_of_rows=1)); print('local services:', len(services)); print(services[0]['servNm'] if services else 'no data')"
 ```
 
+단위 테스트 (네트워크/실제 키 불필요):
+
+```bash
+DATA_GO_KR_KEY=dummy MISTRAL_API_KEY=dummy .venv/bin/python -m unittest discover -s tests -t .
+```
+
 ## 다음 작업
 
 1. Mistral 전처리 파이프라인을 중앙/지자체 각 1건씩 검증

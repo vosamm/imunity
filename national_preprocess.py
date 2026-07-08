@@ -1,5 +1,4 @@
 import sys
-import io
 import os
 import json
 import time
@@ -65,17 +64,32 @@ def preprocess(detail: dict) -> dict:
     return json.loads(text)
 
 
-def run_pipeline(total=10):
-    """national_welfare에서 total건 연속 조회 → Mistral 전처리 파이프라인"""
+def run_pipeline(total=10, output_path="data/national_preprocessed.json"):
+    """national_welfare에서 total건 연속 조회 → Mistral 전처리 → JSON 파일 저장.
+
+    전처리 실패 레코드는 processed=None으로 기록하고 배치는 계속 진행한다.
+    Mistral 호출은 비용이 발생하므로 결과를 항상 파일로 보존한다.
+    """
     print(f"=== 중앙부처 복지서비스 전처리 파이프라인 ({total}건) ===\n")
+    results = []
     for meta, detail in national_welfare.iter_details(total=total):
         print(f"[{meta['servId']}] {meta['servNm']}")
+        processed = None
         try:
-            result = preprocess(detail)
-            print(json.dumps(result, ensure_ascii=False, indent=2))
+            processed = preprocess(detail)
+            print(json.dumps(processed, ensure_ascii=False, indent=2))
         except Exception as e:
             print(f"  전처리 실패: {e}")
+        results.append({"meta": meta, "detail": detail, "processed": processed})
         print()
+
+    out_dir = os.path.dirname(output_path)
+    if out_dir:
+        os.makedirs(out_dir, exist_ok=True)
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(results, f, ensure_ascii=False, indent=2)
+    print(f"저장 완료: {output_path} ({len(results)}건)")
+    return results
 
 
 if __name__ == "__main__":
