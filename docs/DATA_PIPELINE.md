@@ -30,8 +30,14 @@
 9. 검색 API 제공
 ```
 
-현재 구현은 1-3 단계 중심이다. Mistral 전처리 코드는 6-7 단계의 초기 형태이며,
-중앙부처/지자체 각 1건 실행 검증을 완료했다.
+구현 현황 (자율 세션 2026-07-09):
+
+- 1-4 단계: `national_welfare.py` / `local_welfare.py` 수집·파싱. 원문 캐시는 `raw_cache.py` → `data/raw/`, 초기 수집은 `collect_raw.py` (중앙/지자체 각 99건).
+- 5 단계: `schema.py`(`normalize_national`/`normalize_local`) — 공통 스키마 정규화. 미명시 필드는 None, 원문은 `raw_payload`에 보존.
+- 6 단계: `classify.py`(`relevance`) — 키워드 기반 관련성 분류 (Mistral 없이 동작하는 fallback).
+- 8 단계: `storage.py` — SQLite(`data/welfare.db`) UPSERT 저장. `build_db.py`로 캐시 전체 적재(198건).
+- 9 단계: `web/` Next.js `/api/services` — 지역/키워드/관련성 필터 검색 API + 웹 UI.
+- 7 단계(Mistral 전처리)는 초기 형태이며 중앙/지자체 각 1건 실행 검증 완료. 분류는 키워드 우선(ROADMAP Phase 2 순서).
 
 ## 4. 공통 스키마 초안
 

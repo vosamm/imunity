@@ -6,9 +6,9 @@
 
 ## Current Focus
 
-Phase 2 진입 (Phase 0·1 게이트 통과).
+Phase 0~3 전 단계 게이트 통과. 아침 체크포인트(사람 검토) 대기.
 
-현재 초점은 암환자 관련성 키워드 분류(`classify.py`)와 골든 케이스 통과다.
+다음 초점은 `data/review_samples.md` 30건 사람 검토와 웹 MVP 로컬 확인이다.
 
 ## Active Ownership
 
@@ -66,19 +66,25 @@ Phase 2 진입 (Phase 0·1 게이트 통과).
   - DB 전 레코드에 분류 적용 (high 4 / medium 86 / low 29 / exclude 79).
   - `gen_review_samples.py`로 `data/review_samples.md` 30건 생성 (아침 검토용, high/exclude 경계 포함).
 - 수락 테스트 16건 + 단위 테스트 17건 전부 GREEN.
+- Phase 3 (Next.js 웹 MVP): `web/` (App Router, TypeScript, Next 15.5.20).
+  - `web/lib/services.ts`: `data/welfare.db`를 서버에서만 읽는 조회 계층 (better-sqlite3, readonly).
+  - `web/app/api/services/route.ts`: 지역/키워드/관련성 필터 API. 미입력 필터는 제외 조건 아님. 중앙부처(전국) 항상 포함.
+  - `web/app/page.tsx`: 검색/필터 + 결과 목록 + 상세 드로어. 문구는 "대상일 수 있음/확인 필요"만 사용 (확정 표현 금지).
+  - 게이트: `npm run build` 성공, dev 서버 `/api/services?q=암` 응답(2건, 모두 암환자 제도) 확인, 스크린샷 3장 `data/screenshots/` 저장.
+  - 보안: 서버 키 클라이언트 번들 미유입 확인(웹은 API 키 미사용, SQLite readonly). Next.js critical CVE 회피 위해 15.1.6 → 15.5.20 업그레이드.
 
 ## In Progress
 
-- Phase 3: Next.js 웹 MVP
+- 없음 (Phase 0~3 완료). 아침 체크포인트 대기.
 
-## Next
+## Next (아침 체크포인트 이후)
 
-1. `.env` 있는 원본 디렉터리에서 `docs/AUTONOMOUS_RUN.md` 8장의 프롬프트로 자율 세션 시작
-2. Phase 0: 중앙/지자체 각 100건 원문 캐시 수집
-3. Phase 1: `schema.py` + `storage.py` 구현 → 수락 테스트 통과
-4. Phase 2: `classify.py` 구현 → 골든 케이스 통과 → 샘플 30건 생성
-5. Phase 3: Next.js 웹 MVP
-6. 아침 체크포인트: 분류 샘플 30건 사람 검토
+1. `data/review_samples.md` 30건 사람 검토 — 특히 high/exclude 경계 (예: "에너지바우처"가 중증질환/산정특례 대상 문구로 high 판정된 것이 타당한지). 필요하면 `classify.py` 키워드 조정.
+2. 웹 MVP 로컬 확인: 저장소 루트에서 `python collect_raw.py 100 && python build_db.py` → `cd web && npm install && npm run dev` → http://localhost:3100
+3. 분류 근거를 사용자에게 노출할지 결정 (현재 상세 드로어 note에 분류 근거 표시 중 — 확정 판정 아님 문구와 함께).
+4. Mistral 기반 분류(ROADMAP Phase 2 후반)로 키워드 fallback 보완 검토.
+5. 시군구 단위 필터 UI 및 지역 자동완성, 페이지네이션 추가.
+6. Supabase(Postgres) 이전 및 Vercel 배포 준비 (ADR-0001).
 
 ## Blockers
 
