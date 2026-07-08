@@ -61,9 +61,15 @@ Phase 2 진입 (Phase 0·1 게이트 통과).
   - `acceptance_tests/test_phase1_schema_storage.py` 11건 통과, 단위 테스트 17건 GREEN 유지.
   - `build_db.py`로 캐시 전체 정규화 → `data/welfare.db` 생성 (총 **198건**).
 
+- Phase 2 (암환자 관련성 키워드 분류): `classify.py`(`relevance(text)`) 구현.
+  - `acceptance_tests/test_phase2_classify.py` 5건 통과 (소아암 non-exclude 골든 케이스 포함).
+  - DB 전 레코드에 분류 적용 (high 4 / medium 86 / low 29 / exclude 79).
+  - `gen_review_samples.py`로 `data/review_samples.md` 30건 생성 (아침 검토용, high/exclude 경계 포함).
+- 수락 테스트 16건 + 단위 테스트 17건 전부 GREEN.
+
 ## In Progress
 
-- Phase 2: `classify.py` 구현 및 골든 케이스 통과
+- Phase 3: Next.js 웹 MVP
 
 ## Next
 
