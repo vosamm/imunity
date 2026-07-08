@@ -347,3 +347,29 @@ select:focus {
   font-size: 0.85rem;
   color: var(--text-muted);
 }
+
+/* 개발/QA 전용 (?debug=1). 일반 사용자에게는 렌더되지 않는다. */
+.dev-note {
+  margin-top: 14px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px dashed var(--accent);
+  background: var(--accent-soft);
+  font-size: 0.82rem;
+  color: var(--text);
+  line-height: 1.6;
+}
+
+.dev-note code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-weight: 700;
+}
+
+.dev-tag {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.72rem;
+  color: var(--accent);
+  border: 1px dashed var(--accent);
+  border-radius: 6px;
+  padding: 1px 6px;
+}

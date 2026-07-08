@@ -47,6 +47,13 @@ export default function Home() {
   const [count, setCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState<Service | null>(null);
+  // 개발/QA 전용 표시 모드. URL에 ?debug=1 이 있을 때만 분류 근거를 화면에 보여준다.
+  const [debug, setDebug] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setDebug(params.get("debug") === "1");
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -183,6 +190,9 @@ export default function Home() {
                   </span>
                   <span>{regionText(s)}</span>
                   {s.ministry ? <span>{s.ministry}</span> : null}
+                  {debug ? (
+                    <span className="dev-tag">dev:{s.cancer_relevance}</span>
+                  ) : null}
                 </div>
               </button>
             );
@@ -191,7 +201,11 @@ export default function Home() {
       )}
 
       {selected ? (
-        <Detail service={selected} onClose={() => setSelected(null)} />
+        <Detail
+          service={selected}
+          debug={debug}
+          onClose={() => setSelected(null)}
+        />
       ) : null}
     </main>
   );
@@ -212,9 +226,11 @@ function Field({ label, value }: { label: string; value: string | null }) {
 
 function Detail({
   service,
+  debug,
   onClose,
 }: {
   service: Service;
+  debug: boolean;
   onClose: () => void;
 }) {
   const b = badge(service.cancer_relevance);
@@ -258,10 +274,17 @@ function Detail({
           이 제도는 회원님이 <strong>대상일 수 있음</strong>을 안내할 뿐이며, 확정 판정이
           아닙니다. 소득·나이·지역 등 세부 조건은 소관기관에서 <strong>확인이 필요</strong>
           합니다.
-          {service.cancer_relevance_reason
-            ? ` (분류 근거: ${service.cancer_relevance_reason})`
-            : ""}
         </div>
+
+        {/* 개발/QA 전용: ?debug=1 일 때만 분류 등급·근거를 노출한다. 일반 사용자에게는 숨긴다. */}
+        {debug ? (
+          <div className="dev-note">
+            <strong>[개발용]</strong> 관련성 등급:{" "}
+            <code>{service.cancer_relevance ?? "-"}</code>
+            <br />
+            분류 근거: {service.cancer_relevance_reason ?? "-"}
+          </div>
+        ) : null}
       </div>
     </div>
   );

@@ -81,7 +81,7 @@ Phase 0~3 전 단계 게이트 통과. 아침 체크포인트(사람 검토) 대
 
 1. `data/review_samples.md` 30건 사람 검토 — 특히 high/exclude 경계 (예: "에너지바우처"가 중증질환/산정특례 대상 문구로 high 판정된 것이 타당한지). 필요하면 `classify.py` 키워드 조정.
 2. 웹 MVP 로컬 확인: 저장소 루트에서 `python collect_raw.py 100 && python build_db.py` → `cd web && npm install && npm run dev` → http://localhost:3100
-3. 분류 근거를 사용자에게 노출할지 결정 (현재 상세 드로어 note에 분류 근거 표시 중 — 확정 판정 아님 문구와 함께).
+3. (결정됨) 분류 근거는 일반 사용자에게 숨기고 개발/QA만 확인한다. API 응답에는 등급·근거 항상 포함, 브라우저는 `?debug=1`일 때만 노출 (`web/README.md` 참고).
 4. Mistral 기반 분류(ROADMAP Phase 2 후반)로 키워드 fallback 보완 검토.
 5. 시군구 단위 필터 UI 및 지역 자동완성, 페이지네이션 추가.
 6. Supabase(Postgres) 이전 및 Vercel 배포 준비 (ADR-0001).
