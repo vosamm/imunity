@@ -19,6 +19,8 @@
 | [AI_COLLABORATION.md](./AI_COLLABORATION.md) | AI/개발자가 이어서 작업할 때 지켜야 할 협업 규칙 |
 | [ROADMAP.md](./ROADMAP.md) | 단계별 구현 순서와 완료 기준 |
 | [STATUS.md](./STATUS.md) | 현재 진척도, 담당, 다음 작업, handoff prompt |
+| [AUTONOMOUS_RUN.md](./AUTONOMOUS_RUN.md) | 자율 개발(밤샘) 실행 규칙, Phase 게이트, 체크포인트 |
+| [adr/](./adr/) | 아키텍처 결정 기록 (ADR-0001: 저장 구조·스택·분류 기준) |
 
 ## 현재 구현 상태
 

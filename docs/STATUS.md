@@ -48,19 +48,24 @@ Phase 1 진입.
   - 전처리 결과 `data/*.json` 저장 추가 (Mistral 비용 보존, `data/`는 gitignore)
   - `tests/` unittest 11건 추가 (네트워크 스텁 기반, API 키 불필요)
 
+- 자율 개발(밤샘) 실행 패키지 구축 (2026-07-09)
+  - 미결정 항목 확정: SQLite / Next.js / exclude 기준 수정 (`docs/adr/0001-mvp-storage-stack-classification.md`)
+  - 수락 테스트(채점표) 16건 작성: `acceptance_tests/` — Phase 1(스키마+SQLite), Phase 2(분류 골든 케이스)
+  - 가드레일: `raw_cache.py` (API 원문 캐시, 쿼터 보호), `MISTRAL_MAX_CALLS` 호출 상한
+  - 실행 규칙/Phase 게이트/아침 체크포인트: `docs/AUTONOMOUS_RUN.md`
+
 ## In Progress
 
-- 검증 결과 문서 반영
-- 공통 데이터 스키마 구현 준비
+- 자율 개발 세션 실행 대기 (Phase 0 초기 수집부터)
 
 ## Next
 
-1. 현재 변경사항 커밋/푸시
-2. 공통 데이터 스키마 구현
-3. 중앙부처/지자체 원문 파싱 결과를 공통 스키마로 변환
-4. 암환자 관련성 필터링 기준을 공통 스키마에 반영
-5. 로컬 저장 구조 추가
-6. 중앙/지자체 각 10건 수집 및 정규화 검증
+1. `.env` 있는 원본 디렉터리에서 `docs/AUTONOMOUS_RUN.md` 8장의 프롬프트로 자율 세션 시작
+2. Phase 0: 중앙/지자체 각 100건 원문 캐시 수집
+3. Phase 1: `schema.py` + `storage.py` 구현 → 수락 테스트 통과
+4. Phase 2: `classify.py` 구현 → 골든 케이스 통과 → 샘플 30건 생성
+5. Phase 3: Next.js 웹 MVP
+6. 아침 체크포인트: 분류 샘플 30건 사람 검토
 
 ## Blockers
 

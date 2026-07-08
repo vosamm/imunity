@@ -25,14 +25,13 @@ MVP 웹서비스는 다음 구조를 권장한다.
   -> 웹 프론트엔드
 ```
 
-## 3. 권장 기술 선택
+## 3. 기술 선택 (확정: ADR-0001)
 
-초기 MVP 기준:
+초기 MVP 기준 — `docs/adr/0001-mvp-storage-stack-classification.md`에서 확정:
 
-- Web: Next.js
-- API: Next.js Route Handlers 또는 별도 FastAPI
+- Web: Next.js (App Router + Route Handlers)
 - Batch: Python 스크립트 유지 후 점진적으로 작업 큐/cron 연결
-- DB: Supabase Postgres 또는 PostgreSQL
+- DB: MVP는 **SQLite**, 배포 단계(Phase 4)에서 Supabase Postgres 이전
 - Hosting: Vercel
 - Secrets: 배포 플랫폼 환경변수 또는 Secret Manager
 

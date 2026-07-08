@@ -13,6 +13,10 @@ load_dotenv()
 MISTRAL_API_KEY = os.environ["MISTRAL_API_KEY"]
 MISTRAL_URL = "https://api.mistral.ai/v1/chat/completions"
 
+# 무인 실행 중 비용 폭주 방지: 프로세스당 Mistral 호출 상한
+MISTRAL_MAX_CALLS = int(os.getenv("MISTRAL_MAX_CALLS", "200"))
+_mistral_call_count = 0
+
 PROMPT_TEMPLATE = """
 아래는 한국 지자체 복지서비스의 상세 정보야.
 다음 항목을 JSON으로 추출해줘. 없으면 null로 표기해.
@@ -39,6 +43,13 @@ def build_detail_text(info: dict) -> str:
 
 
 def call_mistral(prompt: str, retries: int = 3) -> str:
+    global _mistral_call_count
+    if _mistral_call_count >= MISTRAL_MAX_CALLS:
+        raise RuntimeError(
+            f"Mistral 호출 상한 도달 ({MISTRAL_MAX_CALLS}회). "
+            "필요하면 MISTRAL_MAX_CALLS 환경변수로 조정한다."
+        )
+    _mistral_call_count += 1
     headers = {
         "Authorization": f"Bearer {MISTRAL_API_KEY}",
         "Content-Type": "application/json",
