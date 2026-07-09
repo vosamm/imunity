@@ -61,15 +61,6 @@ function glyphOf(s: Service): string {
   return GLYPHS[s.support_categories[0]] ?? "🏥";
 }
 
-function SearchIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"
-      strokeLinecap="round" aria-hidden="true">
-      <circle cx="11" cy="11" r="7" /><path d="m20 20-3.2-3.2" />
-    </svg>
-  );
-}
-
 function HeartIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
@@ -426,9 +417,6 @@ export default function Home() {
                     ))}
                   </select>
                 </div>
-                <button className="search-orb" type="submit" aria-label="검색">
-                  <SearchIcon />
-                </button>
               </form>
 
               <div className="filter-bar">
