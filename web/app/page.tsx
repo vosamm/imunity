@@ -19,6 +19,7 @@ type Service = {
   support_categories: string[];
   cancer_relevance: string | null;
   cancer_relevance_reason: string | null;
+  similarity?: number;
 };
 
 const LEVELS = [
@@ -47,6 +48,10 @@ function regionText(s: Service): string {
 }
 
 export default function Home() {
+  // 탭 상태
+  const [tab, setTab] = useState<"keyword" | "ai">("keyword");
+
+  // 키워드 검색 탭 state
   const [q, setQ] = useState("");
   const [sido, setSido] = useState("");
   const [sigungu, setSigungu] = useState("");
@@ -58,6 +63,19 @@ export default function Home() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+
+  // AI 매칭 탭 전용 state
+  const [aiAge, setAiAge] = useState("");
+  const [aiCancerType, setAiCancerType] = useState("");
+  const [aiSido, setAiSido] = useState("");
+  const [aiSigungu, setAiSigungu] = useState("");
+  const [aiIncomeLevel, setAiIncomeLevel] = useState("");
+  const [aiFreeText, setAiFreeText] = useState("");
+  const [aiResults, setAiResults] = useState<Service[]>([]);
+  const [aiTotal, setAiTotal] = useState(0);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiSigunguOptions, setAiSigunguOptions] = useState<string[]>([]);
+
   const [selected, setSelected] = useState<Service | null>(null);
   // 상세를 연 카드로 포커스를 되돌리기 위한 참조 (키보드 사용자 배려).
   const lastCardRef = useRef<HTMLElement | null>(null);
@@ -131,6 +149,19 @@ export default function Home() {
       .catch(() => setSigunguOptions([]));
   }, [sido]);
 
+  // AI 탭: 시도 변경 → 시군구 옵션 갱신.
+  useEffect(() => {
+    setAiSigungu("");
+    if (!aiSido) {
+      setAiSigunguOptions([]);
+      return;
+    }
+    fetch(`/api/regions?sido=${encodeURIComponent(aiSido)}`)
+      .then((r) => r.json())
+      .then((d: { sigungu: string[] }) => setAiSigunguOptions(d.sigungu ?? []))
+      .catch(() => setAiSigunguOptions([]));
+  }, [aiSido]);
+
   async function loadMore() {
     setLoadingMore(true);
     try {
@@ -172,6 +203,34 @@ export default function Home() {
     lastCardRef.current?.focus();
   }
 
+  async function handleAiSearch() {
+    setAiLoading(true);
+    try {
+      const resp = await fetch("/api/rag-search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          form: {
+            age: aiAge ? parseInt(aiAge, 10) : null,
+            cancer_type: aiCancerType || null,
+            region_sido: aiSido || null,
+            region_sigungu: aiSigungu || null,
+            income_level: aiIncomeLevel || null,
+          },
+          free_text: aiFreeText || null,
+        }),
+      });
+      const data = await resp.json();
+      setAiResults(data.results ?? []);
+      setAiTotal(data.total ?? 0);
+    } catch {
+      setAiResults([]);
+      setAiTotal(0);
+    } finally {
+      setAiLoading(false);
+    }
+  }
+
   const hasActiveFilter =
     q.trim() || sido || sigungu || category || levels.length !== 3;
 
@@ -189,150 +248,303 @@ export default function Home() {
         대상 여부와 조건은 각 제도의 소관기관에서 확인하세요.
       </div>
 
-      <section className="filters" aria-label="검색 및 필터">
-        <div className="row">
-          <div className="field" style={{ flex: "2 1 240px" }}>
-            <label htmlFor="q">검색어</label>
-            <input
-              id="q"
-              type="text"
-              placeholder="예: 암, 의료비, 간병, 치료비"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="sido">지역 (시도)</label>
-            <select id="sido" value={sido} onChange={(e) => setSido(e.target.value)}>
-              <option value="">전체 (중앙부처 포함)</option>
-              {sidoOptions.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="field">
-            <label htmlFor="sigungu">시군구</label>
-            <select
-              id="sigungu"
-              value={sigungu}
-              onChange={(e) => setSigungu(e.target.value)}
-              disabled={!sido || sigunguOptions.length === 0}
-            >
-              <option value="">
-                {sido ? "전체" : "시도를 먼저 선택"}
-              </option>
-              {sigunguOptions.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
+      <div className="tabs" role="tablist">
+        <button
+          role="tab"
+          aria-selected={tab === "keyword"}
+          className={`tab ${tab === "keyword" ? "active" : ""}`}
+          onClick={() => setTab("keyword")}
+        >
+          키워드 검색
+        </button>
+        <button
+          role="tab"
+          aria-selected={tab === "ai"}
+          className={`tab ${tab === "ai" ? "active" : ""}`}
+          onClick={() => setTab("ai")}
+        >
+          AI 매칭
+        </button>
+      </div>
 
-        <div className="field">
-          <label>어떤 도움이 필요하세요?</label>
-          <div className="chips" role="group" aria-label="지원 목적 필터">
-            {CATEGORIES.map((cat) => (
-              <button
-                key={cat}
-                type="button"
-                className="chip"
-                aria-pressed={category === cat}
-                onClick={() => setCategory((prev) => (prev === cat ? "" : cat))}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="field">
-          <label>관련성</label>
-          <div className="chips" role="group" aria-label="관련성 필터">
-            {LEVELS.map((lv) => (
-              <button
-                key={lv.key}
-                type="button"
-                className="chip"
-                aria-pressed={levels.includes(lv.key)}
-                onClick={() => toggleLevel(lv.key)}
-              >
-                {lv.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <p className="result-meta" role="status" aria-live="polite">
-        {loading
-          ? "불러오는 중…"
-          : `검색 결과 ${total}건${results.length < total ? ` (${results.length}건 표시)` : ""}`}
-        {sido ? ` · 지역: ${sido}${sigungu ? ` ${sigungu}` : ""} (+ 전국 제도)` : ""}
-        {category ? ` · 목적: ${category}` : ""}
-      </p>
-
-      {!loading && results.length === 0 ? (
-        <div className="empty">
-          <p>조건에 맞는 제도를 찾지 못했습니다.</p>
-          <p className="empty-hint">
-            검색어를 줄이거나 필터를 풀면 더 많은 제도가 보입니다.
-          </p>
-          {hasActiveFilter ? (
-            <button type="button" className="reset-btn" onClick={resetFilters}>
-              필터 모두 초기화
-            </button>
-          ) : null}
-        </div>
-      ) : (
+      {tab === "keyword" && (
         <>
-          <div className="list">
-            {results.map((s) => {
-              const b = badge(s.cancer_relevance);
-              return (
-                <button
-                  key={`${s.source_type}:${s.source_service_id}`}
-                  className="card"
-                  onClick={(e) => openDetail(s, e.currentTarget)}
+          <section className="filters" aria-label="검색 및 필터">
+            <div className="row">
+              <div className="field" style={{ flex: "2 1 240px" }}>
+                <label htmlFor="q">검색어</label>
+                <input
+                  id="q"
+                  type="text"
+                  placeholder="예: 암, 의료비, 간병, 치료비"
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="sido">지역 (시도)</label>
+                <select id="sido" value={sido} onChange={(e) => setSido(e.target.value)}>
+                  <option value="">전체 (중앙부처 포함)</option>
+                  {sidoOptions.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="field">
+                <label htmlFor="sigungu">시군구</label>
+                <select
+                  id="sigungu"
+                  value={sigungu}
+                  onChange={(e) => setSigungu(e.target.value)}
+                  disabled={!sido || sigunguOptions.length === 0}
                 >
-                  <div className="card-top">
-                    <h3>{s.title ?? "(제목 없음)"}</h3>
-                    <span className={`badge ${b.cls}`}>{b.text}</span>
-                  </div>
-                  {s.summary ? <p className="summary">{s.summary}</p> : null}
-                  <div className="meta-row">
-                    <span className="source-tag">
-                      {s.source_type === "national" ? "중앙부처" : "지자체"}
-                    </span>
-                    <span>{regionText(s)}</span>
-                    {s.support_categories.slice(0, 3).map((c) => (
-                      <span key={c} className="cat-tag">
-                        {c}
-                      </span>
-                    ))}
-                    {debug ? (
-                      <span className="dev-tag">dev:{s.cancer_relevance}</span>
-                    ) : null}
-                  </div>
+                  <option value="">
+                    {sido ? "전체" : "시도를 먼저 선택"}
+                  </option>
+                  {sigunguOptions.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="field">
+              <label>어떤 도움이 필요하세요?</label>
+              <div className="chips" role="group" aria-label="지원 목적 필터">
+                {CATEGORIES.map((cat) => (
+                  <button
+                    key={cat}
+                    type="button"
+                    className="chip"
+                    aria-pressed={category === cat}
+                    onClick={() => setCategory((prev) => (prev === cat ? "" : cat))}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="field">
+              <label>관련성</label>
+              <div className="chips" role="group" aria-label="관련성 필터">
+                {LEVELS.map((lv) => (
+                  <button
+                    key={lv.key}
+                    type="button"
+                    className="chip"
+                    aria-pressed={levels.includes(lv.key)}
+                    onClick={() => toggleLevel(lv.key)}
+                  >
+                    {lv.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          <p className="result-meta" role="status" aria-live="polite">
+            {loading
+              ? "불러오는 중…"
+              : `검색 결과 ${total}건${results.length < total ? ` (${results.length}건 표시)` : ""}`}
+            {sido ? ` · 지역: ${sido}${sigungu ? ` ${sigungu}` : ""} (+ 전국 제도)` : ""}
+            {category ? ` · 목적: ${category}` : ""}
+          </p>
+
+          {!loading && results.length === 0 ? (
+            <div className="empty">
+              <p>조건에 맞는 제도를 찾지 못했습니다.</p>
+              <p className="empty-hint">
+                검색어를 줄이거나 필터를 풀면 더 많은 제도가 보입니다.
+              </p>
+              {hasActiveFilter ? (
+                <button type="button" className="reset-btn" onClick={resetFilters}>
+                  필터 모두 초기화
                 </button>
-              );
-            })}
-          </div>
-          {results.length < total ? (
+              ) : null}
+            </div>
+          ) : (
+            <>
+              <div className="list">
+                {results.map((s) => {
+                  const b = badge(s.cancer_relevance);
+                  return (
+                    <button
+                      key={`${s.source_type}:${s.source_service_id}`}
+                      className="card"
+                      onClick={(e) => openDetail(s, e.currentTarget)}
+                    >
+                      <div className="card-top">
+                        <h3>{s.title ?? "(제목 없음)"}</h3>
+                        <span className={`badge ${b.cls}`}>{b.text}</span>
+                      </div>
+                      {s.summary ? <p className="summary">{s.summary}</p> : null}
+                      <div className="meta-row">
+                        <span className="source-tag">
+                          {s.source_type === "national" ? "중앙부처" : "지자체"}
+                        </span>
+                        <span>{regionText(s)}</span>
+                        {s.support_categories.slice(0, 3).map((c) => (
+                          <span key={c} className="cat-tag">
+                            {c}
+                          </span>
+                        ))}
+                        {debug ? (
+                          <span className="dev-tag">dev:{s.cancer_relevance}</span>
+                        ) : null}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+              {results.length < total ? (
+                <button
+                  type="button"
+                  className="load-more"
+                  onClick={loadMore}
+                  disabled={loadingMore}
+                >
+                  {loadingMore
+                    ? "불러오는 중…"
+                    : `더 보기 (${results.length}/${total})`}
+                </button>
+              ) : null}
+            </>
+          )}
+        </>
+      )}
+
+      {tab === "ai" && (
+        <>
+          <section className="filters" aria-label="AI 매칭 입력">
+            <div className="row">
+              <div className="field">
+                <label htmlFor="ai-age">나이</label>
+                <input
+                  id="ai-age"
+                  type="number"
+                  placeholder="예: 45"
+                  value={aiAge}
+                  onChange={(e) => setAiAge(e.target.value)}
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="ai-cancer">암 종류</label>
+                <input
+                  id="ai-cancer"
+                  type="text"
+                  placeholder="예: 유방암, 폐암"
+                  value={aiCancerType}
+                  onChange={(e) => setAiCancerType(e.target.value)}
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="ai-sido">지역 (시도)</label>
+                <select
+                  id="ai-sido"
+                  value={aiSido}
+                  onChange={(e) => setAiSido(e.target.value)}
+                >
+                  <option value="">전체</option>
+                  {sidoOptions.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="field">
+                <label htmlFor="ai-sigungu">시군구</label>
+                <select
+                  id="ai-sigungu"
+                  value={aiSigungu}
+                  onChange={(e) => setAiSigungu(e.target.value)}
+                  disabled={!aiSido || aiSigunguOptions.length === 0}
+                >
+                  <option value="">{aiSido ? "전체" : "시도를 먼저 선택"}</option>
+                  {aiSigunguOptions.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="field">
+                <label htmlFor="ai-income">소득 수준</label>
+                <select
+                  id="ai-income"
+                  value={aiIncomeLevel}
+                  onChange={(e) => setAiIncomeLevel(e.target.value)}
+                >
+                  <option value="">선택 안함</option>
+                  <option value="기초생활">기초생활</option>
+                  <option value="차상위">차상위</option>
+                  <option value="일반">일반</option>
+                </select>
+              </div>
+            </div>
+            <div className="field">
+              <label htmlFor="ai-text">추가 상황</label>
+              <textarea
+                id="ai-text"
+                placeholder="예: 치료비가 부담되고 간병인이 필요합니다"
+                value={aiFreeText}
+                onChange={(e) => setAiFreeText(e.target.value)}
+                rows={3}
+              />
+            </div>
             <button
               type="button"
-              className="load-more"
-              onClick={loadMore}
-              disabled={loadingMore}
+              className="ai-search-btn"
+              onClick={handleAiSearch}
+              disabled={aiLoading}
             >
-              {loadingMore
-                ? "불러오는 중…"
-                : `더 보기 (${results.length}/${total})`}
+              {aiLoading ? "검색 중..." : "AI 매칭 검색"}
             </button>
-          ) : null}
+          </section>
+
+          <p className="result-meta" role="status" aria-live="polite">
+            {aiLoading
+              ? "AI가 매칭 중…"
+              : aiTotal > 0
+              ? `AI 매칭 결과 ${aiTotal}건`
+              : ""}
+          </p>
+
+          {aiResults.length > 0 && (
+            <div className="list">
+              {aiResults.map((s) => {
+                const b = badge(s.cancer_relevance);
+                return (
+                  <button
+                    key={`${s.source_type}:${s.source_service_id}`}
+                    className="card"
+                    onClick={(e) => openDetail(s, e.currentTarget)}
+                  >
+                    <div className="card-top">
+                      <h3>{s.title ?? "(제목 없음)"}</h3>
+                      <span className={`badge ${b.cls}`}>{b.text}</span>
+                      {s.similarity != null && (
+                        <span className="similarity">
+                          {Math.round(s.similarity * 100)}% 일치
+                        </span>
+                      )}
+                    </div>
+                    {s.summary ? <p className="summary">{s.summary}</p> : null}
+                    <div className="meta-row">
+                      <span className="source-tag">
+                        {s.source_type === "national" ? "중앙부처" : "지자체"}
+                      </span>
+                      <span>{regionText(s)}</span>
+                      {s.support_categories.slice(0, 3).map((c) => (
+                        <span key={c} className="cat-tag">{c}</span>
+                      ))}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </>
       )}
 
