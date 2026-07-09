@@ -4,7 +4,7 @@ import { searchServices } from "@/lib/services";
 // 항상 서버에서 SQLite를 읽는다 (정적 캐시 방지). 서버 키는 클라이언트로 나가지 않는다.
 export const dynamic = "force-dynamic";
 
-export function GET(req: NextRequest) {
+export async function GET(req: NextRequest) {
   const sp = req.nextUrl.searchParams;
 
   const levelsParam = sp.get("relevance");
@@ -22,7 +22,7 @@ export function GET(req: NextRequest) {
   const offset = Number.isFinite(offsetRaw) && offsetRaw > 0 ? offsetRaw : undefined;
 
   try {
-    const { total, results } = searchServices({
+    const { total, results } = await searchServices({
       q: sp.get("q") ?? undefined,
       sido: sp.get("sido") ?? undefined,
       sigungu: sp.get("sigungu") ?? undefined,
