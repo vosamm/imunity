@@ -14,6 +14,7 @@ import national_welfare
 import local_welfare
 import schema
 import storage
+import embed
 
 DB_PATH = os.path.join("data", "welfare.db")
 
@@ -103,5 +104,37 @@ def build(db_path=DB_PATH, with_classify=True):
     return storage.count_services(db_path)
 
 
+def _service_text(row):
+    """임베딩에 사용할 텍스트를 생성한다."""
+    parts = [row.get("title"), row.get("summary"), row.get("target"),
+             row.get("benefit"), row.get("criteria")]
+    return " ".join(v for v in parts if v)
+
+
+def build_embeddings(db_path=DB_PATH):
+    """전체 서비스의 임베딩을 생성해 DB에 저장한다."""
+    storage.init_embeddings_table(db_path)
+    services = storage.all_services(db_path)
+    if not services:
+        print("임베딩 대상 레코드 없음")
+        return 0
+
+    texts = [_service_text(s) for s in services]
+    print(f"임베딩 생성 중... ({len(texts)}건)")
+    vectors = embed.get_embeddings(texts)
+
+    for svc, vec in zip(services, vectors):
+        storage.upsert_embedding(
+            db_path,
+            svc["source_type"],
+            svc["source_service_id"],
+            vec,
+            embed.EMBED_MODEL,
+        )
+    print(f"임베딩 {len(vectors)}건 저장 완료")
+    return len(vectors)
+
+
 if __name__ == "__main__":
     build()
+    build_embeddings()
