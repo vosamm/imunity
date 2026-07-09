@@ -88,6 +88,31 @@ body {
   font-size: 0.88rem;
 }
 
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin: 0 2px 18px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  font-size: 0.85rem;
+}
+
+.legend-label {
+  font-weight: 600;
+  color: var(--text);
+  margin-right: 2px;
+}
+
+.legend-desc {
+  color: var(--text-muted);
+  margin-right: 8px;
+  font-size: 0.82rem;
+}
+
 .filters {
   display: grid;
   grid-template-columns: 1fr;
@@ -98,6 +123,18 @@ body {
   padding: 16px;
   box-shadow: var(--shadow);
   margin-bottom: 20px;
+}
+
+.filters-help {
+  margin: 0 0 2px;
+  font-size: 0.86rem;
+  color: var(--text-muted);
+}
+
+.field-hint {
+  margin: -2px 0 2px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
 }
 
 .filters .row {
@@ -161,6 +198,20 @@ select:focus {
   background: var(--accent);
   border-color: var(--accent);
   color: #fff;
+}
+
+/* 관련성 칩은 배지와 같은 색으로 켜져 "이 색 = 이 등급"이 한눈에 연결되게 한다. */
+.chip-high[aria-pressed="true"] {
+  background: var(--high);
+  border-color: var(--high);
+}
+.chip-medium[aria-pressed="true"] {
+  background: var(--medium);
+  border-color: var(--medium);
+}
+.chip-low[aria-pressed="true"] {
+  background: var(--low);
+  border-color: var(--low);
 }
 
 .result-meta {

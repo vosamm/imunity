@@ -34,10 +34,11 @@ const CATEGORIES = [
 
 const PAGE_SIZE = 30;
 
-// 확정 표현 금지 (PRODUCT_SPEC 7장). "대상일 수 있음 / 확인 필요"만 사용한다.
+// 배지는 "암환자 관련성 추정"을 나타낸다 (확정 판정이 아님, PRODUCT_SPEC 7장).
+// 색과 글자를 1:1로 맞춰 색의 의미가 스스로 드러나게 한다. 확정 표현("받을 수 있음")은 쓰지 않는다.
 function badge(level: string | null): { cls: string; text: string } {
-  if (level === "high") return { cls: "high", text: "대상일 수 있음" };
-  if (level === "medium") return { cls: "medium", text: "대상일 수 있음" };
+  if (level === "high") return { cls: "high", text: "관련 높음" };
+  if (level === "medium") return { cls: "medium", text: "관련 있음" };
   return { cls: "low", text: "확인 필요" };
 }
 
@@ -189,7 +190,20 @@ export default function Home() {
         대상 여부와 조건은 각 제도의 소관기관에서 확인하세요.
       </div>
 
+      <div className="legend" aria-label="관련성 표시 설명">
+        <span className="legend-label">색 표시는 암환자 관련성 추정이에요:</span>
+        <span className="badge high">관련 높음</span>
+        <span className="legend-desc">암·치료비와 직접 연결</span>
+        <span className="badge medium">관련 있음</span>
+        <span className="legend-desc">질병·돌봄 등 인접</span>
+        <span className="badge low">확인 필요</span>
+        <span className="legend-desc">조건 따라 해당 가능</span>
+      </div>
+
       <section className="filters" aria-label="검색 및 필터">
+        <p className="filters-help">
+          검색어·지역·목적으로 좁혀서 찾을 수 있어요. 조건을 비우면 전체가 보입니다.
+        </p>
         <div className="row">
           <div className="field" style={{ flex: "2 1 240px" }}>
             <label htmlFor="q">검색어</label>
@@ -234,6 +248,7 @@ export default function Home() {
 
         <div className="field">
           <label>어떤 도움이 필요하세요?</label>
+          <p className="field-hint">목적을 누르면 그 분야만 보여요 · 다시 누르면 해제</p>
           <div className="chips" role="group" aria-label="지원 목적 필터">
             {CATEGORIES.map((cat) => (
               <button
@@ -250,13 +265,16 @@ export default function Home() {
         </div>
 
         <div className="field">
-          <label>관련성</label>
+          <label>관련성으로 좁히기</label>
+          <p className="field-hint">
+            켜진 등급만 보여요 · 눌러서 끄면 그 등급은 숨겨집니다
+          </p>
           <div className="chips" role="group" aria-label="관련성 필터">
             {LEVELS.map((lv) => (
               <button
                 key={lv.key}
                 type="button"
-                className="chip"
+                className={`chip chip-${lv.key}`}
                 aria-pressed={levels.includes(lv.key)}
                 onClick={() => toggleLevel(lv.key)}
               >
