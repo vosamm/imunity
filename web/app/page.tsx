@@ -89,7 +89,6 @@ export default function Home() {
 
   // AI 매칭 탭 전용 state
   const [aiAge, setAiAge] = useState("");
-  const [aiCancerType, setAiCancerType] = useState("");
   const [aiSido, setAiSido] = useState("");
   const [aiSigungu, setAiSigungu] = useState("");
   const [aiIncomeLevel, setAiIncomeLevel] = useState("");
@@ -247,7 +246,6 @@ export default function Home() {
         body: JSON.stringify({
           form: {
             age: aiAge ? parseInt(aiAge, 10) : null,
-            cancer_type: aiCancerType || null,
             region_sido: aiSido || null,
             region_sigungu: aiSigungu || null,
             income_level: aiIncomeLevel || null,
@@ -377,10 +375,10 @@ export default function Home() {
         {tab === "keyword" && (
           <>
             <section className="hero">
-              <h1 className="hero-title">암환우를 위한 복지, 한 곳에서 찾아보세요</h1>
+              <h1 className="hero-title">나에게 맞는 복지, 한 곳에서 찾아보세요</h1>
               <p className="hero-sub">
-                중앙부처와 지자체의 공공 복지를 암환우 관점에서 모았습니다. 지역과 필요를
-                고르면 해당될 수 있는 제도를 보여드려요.
+                중앙부처와 지자체의 공공 복지를 모았습니다.<br />
+                지역과 필요를 고르면 해당될 수 있는 제도를 보여드려요.
               </p>
 
               <form className="searchbar" onSubmit={(e) => e.preventDefault()}>
@@ -510,7 +508,7 @@ export default function Home() {
             <section className="hero">
               <h1 className="hero-title">상황을 알려주시면 맞을 만한 제도를 찾아드려요</h1>
               <p className="hero-sub">
-                나이·암 종류·지역·상황을 입력하면, 의미가 비슷한 제도를 AI가 찾아 유사도 순으로
+                나이·지역·상황을 입력하면, 의미가 비슷한 제도를 AI가 찾아 유사도 순으로
                 보여드립니다.
               </p>
 
@@ -520,11 +518,6 @@ export default function Home() {
                     <label htmlFor="ai-age">나이</label>
                     <input id="ai-age" type="number" placeholder="45"
                       value={aiAge} onChange={(e) => setAiAge(e.target.value)} />
-                  </div>
-                  <div className="field">
-                    <label htmlFor="ai-cancer">암 종류</label>
-                    <input id="ai-cancer" type="text" placeholder="유방암, 폐암"
-                      value={aiCancerType} onChange={(e) => setAiCancerType(e.target.value)} />
                   </div>
                   <div className="field">
                     <label htmlFor="ai-sido">지역</label>
@@ -554,8 +547,8 @@ export default function Home() {
                   </div>
                   <div className="field full">
                     <label htmlFor="ai-text">추가 상황</label>
-                    <textarea id="ai-text" rows={3}
-                      placeholder="예: 치료비가 부담되고 간병인이 필요합니다"
+                    <textarea id="ai-text" rows={4}
+                      placeholder={"예를 들면\n· 유방암 치료 중이라 치료비가 부담돼요\n· 폐암 수술 후 간병인이 필요해요\n· 희귀질환으로 매달 약값이 많이 들어요"}
                       value={aiFreeText} onChange={(e) => setAiFreeText(e.target.value)} />
                   </div>
                 </div>
