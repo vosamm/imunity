@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 // 항상 서버에서 동적으로 실행 (정적 캐시 방지).
 export const dynamic = "force-dynamic";
 
-const RAG_SERVER = process.env.RAG_SERVER_URL || "http://localhost:8000";
+const RAG_SERVER = process.env.RAG_SERVER_URL || "http://localhost:8001";
 
 export async function POST(req: NextRequest) {
   try {

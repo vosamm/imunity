@@ -23,6 +23,10 @@ declare module "sql.js" {
     values: unknown[][];
   }
 
-  export default function initSqlJs(): Promise<SqlJsStatic>;
+  interface SqlJsConfig {
+    locateFile?: (file: string) => string;
+  }
+
+  export default function initSqlJs(config?: SqlJsConfig): Promise<SqlJsStatic>;
   export type { Database, Statement, SqlJsStatic };
 }

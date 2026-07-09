@@ -6,7 +6,7 @@
  */
 import fs from "node:fs";
 import path from "node:path";
-import initSqlJs from "sql.js";
+import Database from "better-sqlite3";
 
 const TMP_DIR = path.join(__dirname, ".tmp");
 // 테스트 파일이 병렬 워커에서 동시에 setup을 실행하므로 워커별로 DB를 분리한다.
@@ -133,16 +133,18 @@ export const FIXTURES: FixtureRow[] = [
   },
 ];
 
-async function buildFixtureDb() {
+function buildFixtureDb() {
   fs.mkdirSync(TMP_DIR, { recursive: true });
   fs.rmSync(DB_PATH, { force: true });
-  const SQL = await initSqlJs();
-  const db = new SQL.Database();
+  const db = new Database(DB_PATH);
   const cols = SCHEMA_FIELDS.map((f) => `"${f}" TEXT`).join(", ");
-  db.run(
+  db.exec(
     `CREATE TABLE welfare_services (${cols}, PRIMARY KEY ("source_type", "source_service_id"))`
   );
   const placeholders = SCHEMA_FIELDS.map(() => "?").join(", ");
+  const insert = db.prepare(
+    `INSERT INTO welfare_services (${SCHEMA_FIELDS.map((f) => `"${f}"`).join(", ")}) VALUES (${placeholders})`
+  );
   for (const row of FIXTURES) {
     const full: Record<string, unknown> = {
       ...row,
@@ -157,19 +159,10 @@ async function buildFixtureDb() {
       fetched_at: null,
       processed_at: "2026-07-09T00:00:00Z",
     };
-    const values = SCHEMA_FIELDS.map((f) => {
-      const v = full[f];
-      return v === undefined || v === null ? null : v;
-    });
-    db.run(
-      `INSERT INTO welfare_services (${SCHEMA_FIELDS.map((f) => `"${f}"`).join(", ")}) VALUES (${placeholders})`,
-      values as (string | null)[]
-    );
+    insert.run(SCHEMA_FIELDS.map((f) => (full[f] === undefined ? null : full[f])));
   }
-  const data = db.export();
-  fs.writeFileSync(DB_PATH, Buffer.from(data));
   db.close();
 }
 
-await buildFixtureDb();
+buildFixtureDb();
 process.env.WELFARE_DB_PATH = DB_PATH;

@@ -1,7 +1,7 @@
 import "server-only";
 import path from "node:path";
 import fs from "node:fs";
-import initSqlJs, { type Database as SqlJsDatabase } from "sql.js";
+import Database from "better-sqlite3";
 
 // 정규화 데이터는 저장소 루트 data/welfare.db (Phase 1 build_db.py 산출물).
 // 환경변수로 재정의 가능. 서버에서만 접근하며 클라이언트 번들에 포함되지 않는다.
@@ -46,24 +46,17 @@ export type SearchResult = {
   results: Service[];
 };
 
-let _db: SqlJsDatabase | null = null;
-let _dbInit: Promise<SqlJsDatabase> | null = null;
+let _db: Database.Database | null = null;
 
-async function db(): Promise<SqlJsDatabase> {
+function db(): Database.Database {
   if (_db) return _db;
-  if (_dbInit) return _dbInit;
-  _dbInit = (async () => {
-    if (!fs.existsSync(DB_PATH)) {
-      throw new Error(
-        "welfare.db가 없습니다. 저장소 루트에서 `python build_db.py`로 생성하세요."
-      );
-    }
-    const SQL = await initSqlJs();
-    const buffer = fs.readFileSync(DB_PATH);
-    _db = new SQL.Database(buffer);
-    return _db;
-  })();
-  return _dbInit;
+  if (!fs.existsSync(DB_PATH)) {
+    throw new Error(
+      "welfare.db가 없습니다. 저장소 루트에서 `python build_db.py`로 생성하세요."
+    );
+  }
+  _db = new Database(DB_PATH, { readonly: true, fileMustExist: true });
+  return _db;
 }
 
 function parseJsonArray(value: unknown): string[] {
@@ -97,19 +90,6 @@ function rowToService(row: Record<string, unknown>): Service {
   };
 }
 
-/** sql.js 쿼리 결과를 Record<string, unknown>[] 형태로 변환 */
-function queryAll(database: SqlJsDatabase, sql: string, params?: unknown[]): Record<string, unknown>[] {
-  const stmt = database.prepare(sql);
-  if (params) stmt.bind(params);
-  const results: Record<string, unknown>[] = [];
-  while (stmt.step()) {
-    const row = stmt.getAsObject();
-    results.push(row as Record<string, unknown>);
-  }
-  stmt.free();
-  return results;
-}
-
 const RELEVANCE_RANK: Record<string, number> = {
   high: 0,
   medium: 1,
@@ -117,9 +97,10 @@ const RELEVANCE_RANK: Record<string, number> = {
   exclude: 3,
 };
 
-export async function searchServices(query: ServiceQuery): Promise<SearchResult> {
-  const database = await db();
-  const rows = queryAll(database, "SELECT * FROM welfare_services");
+export function searchServices(query: ServiceQuery): SearchResult {
+  const rows = db()
+    .prepare("SELECT * FROM welfare_services")
+    .all() as Record<string, unknown>[];
   let services = rows.map(rowToService);
 
   const levels = query.levels && query.levels.length
@@ -176,34 +157,32 @@ export async function searchServices(query: ServiceQuery): Promise<SearchResult>
   return { total, results: services.slice(offset, offset + limit) };
 }
 
-export async function getService(
+export function getService(
   sourceType: string,
   sourceServiceId: string
-): Promise<Service | null> {
-  const database = await db();
-  const rows = queryAll(
-    database,
-    "SELECT * FROM welfare_services WHERE source_type=? AND source_service_id=?",
-    [sourceType, sourceServiceId]
-  );
-  return rows.length > 0 ? rowToService(rows[0]) : null;
+): Service | null {
+  const row = db()
+    .prepare(
+      "SELECT * FROM welfare_services WHERE source_type=? AND source_service_id=?"
+    )
+    .get(sourceType, sourceServiceId) as Record<string, unknown> | undefined;
+  return row ? rowToService(row) : null;
 }
 
-export async function listSido(): Promise<string[]> {
-  const database = await db();
-  const rows = queryAll(
-    database,
-    "SELECT DISTINCT region_sido FROM welfare_services WHERE region_sido IS NOT NULL ORDER BY region_sido"
-  );
-  return rows.map((r) => r.region_sido as string);
+export function listSido(): string[] {
+  const rows = db()
+    .prepare(
+      "SELECT DISTINCT region_sido FROM welfare_services WHERE region_sido IS NOT NULL ORDER BY region_sido"
+    )
+    .all() as { region_sido: string }[];
+  return rows.map((r) => r.region_sido);
 }
 
-export async function listSigungu(sido: string): Promise<string[]> {
-  const database = await db();
-  const rows = queryAll(
-    database,
-    "SELECT DISTINCT region_sigungu FROM welfare_services WHERE region_sido = ? AND region_sigungu IS NOT NULL ORDER BY region_sigungu",
-    [sido]
-  );
-  return rows.map((r) => r.region_sigungu as string);
+export function listSigungu(sido: string): string[] {
+  const rows = db()
+    .prepare(
+      "SELECT DISTINCT region_sigungu FROM welfare_services WHERE region_sido = ? AND region_sigungu IS NOT NULL ORDER BY region_sigungu"
+    )
+    .all(sido) as { region_sigungu: string }[];
+  return rows.map((r) => r.region_sigungu);
 }
