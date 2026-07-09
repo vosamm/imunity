@@ -20,7 +20,9 @@ export default function RootLayout({
           href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css"
         />
       </head>
-      <body>{children}</body>
+      {/* suppressHydrationWarning: 브라우저 확장(예: ColorZilla의 cz-shortcut-listen)이
+          <body>에 속성을 주입해 생기는 hydration 불일치 경고를 무시한다. 앱 코드와 무관. */}
+      <body suppressHydrationWarning>{children}</body>
     </html>
   );
 }
