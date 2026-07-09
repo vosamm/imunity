@@ -74,6 +74,7 @@ export default function Home() {
   const [aiResults, setAiResults] = useState<Service[]>([]);
   const [aiTotal, setAiTotal] = useState(0);
   const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState("");
   const [aiSigunguOptions, setAiSigunguOptions] = useState<string[]>([]);
 
   const [selected, setSelected] = useState<Service | null>(null);
@@ -205,6 +206,7 @@ export default function Home() {
 
   async function handleAiSearch() {
     setAiLoading(true);
+    setAiError("");
     try {
       const resp = await fetch("/api/rag-search", {
         method: "POST",
@@ -220,10 +222,18 @@ export default function Home() {
           free_text: aiFreeText || null,
         }),
       });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        setAiError(err.error ?? "오류가 발생했습니다.");
+        setAiResults([]);
+        setAiTotal(0);
+        return;
+      }
       const data = await resp.json();
       setAiResults(data.results ?? []);
       setAiTotal(data.total ?? 0);
     } catch {
+      setAiError("RAG 서버에 연결할 수 없습니다. rag_server.py가 실행 중인지 확인하세요.");
       setAiResults([]);
       setAiTotal(0);
     } finally {
@@ -502,6 +512,10 @@ export default function Home() {
               {aiLoading ? "검색 중..." : "AI 매칭 검색"}
             </button>
           </section>
+
+          {aiError && (
+            <div className="ai-error" role="alert">{aiError}</div>
+          )}
 
           <p className="result-meta" role="status" aria-live="polite">
             {aiLoading
