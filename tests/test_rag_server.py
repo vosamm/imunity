@@ -9,6 +9,27 @@ import storage
 import schema
 
 
+class TestDisplayScores(unittest.TestCase):
+    def test_strong_match_reaches_full_score(self):
+        import rag_server
+        # 평균 0.7에서 DISPLAY_SCALE(0.15) 이상 벌어지면 100%
+        scores = rag_server._display_scores([0.9, 0.7, 0.5])
+        self.assertAlmostEqual(scores[0], 1.0)
+        self.assertAlmostEqual(scores[1], 0.0)
+        self.assertAlmostEqual(scores[2], 0.0)  # 평균 이하는 0으로 클립
+
+    def test_weak_top_is_not_pinned_to_full(self):
+        import rag_server
+        # 1위여도 평균과 가까우면 100%가 아니라 낮은 점수로 표시된다
+        scores = rag_server._display_scores([0.76, 0.7, 0.64])
+        self.assertAlmostEqual(scores[0], 0.06 / rag_server.DISPLAY_SCALE, places=5)
+        self.assertLess(scores[0], 0.5)
+
+    def test_empty(self):
+        import rag_server
+        self.assertEqual(rag_server._display_scores([]), [])
+
+
 class TestRagServer(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
@@ -57,7 +78,10 @@ class TestRagServer(unittest.TestCase):
         self.assertGreater(data["total"], 0)
         # 첫 번째 결과가 SVC001 (더 유사)
         self.assertEqual(data["results"][0]["source_service_id"], "SVC001")
-        self.assertIn("similarity", data["results"][0])
+        # 표시 점수: 쿼리와 사실상 동일한 SVC001은 평균 대비 충분히 벌어져 1.0,
+        # 평균 이하인 SVC002는 0.0 (원시 코사인을 그대로 노출하지 않음)
+        self.assertAlmostEqual(data["results"][0]["similarity"], 1.0)
+        self.assertAlmostEqual(data["results"][-1]["similarity"], 0.0)
 
     @patch("embed.get_embedding")
     def test_rag_search_filters_by_region(self, mock_embed):

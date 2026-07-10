@@ -67,6 +67,19 @@ def _cosine_similarity(a: np.ndarray, b: np.ndarray) -> float:
     return float(dot / norm)
 
 
+
+DISPLAY_SCALE = 0.10
+
+
+def _display_scores(sims) -> list[float]:
+
+    sims = np.asarray(sims, dtype=np.float64)
+    if sims.size == 0:
+        return []
+    scaled = np.clip((sims - sims.mean()) / DISPLAY_SCALE, 0.0, 1.0)
+    return scaled.tolist()
+
+
 @app.post("/api/rag-search")
 def rag_search(req: SearchRequest):
     query_text = _build_query_text(req)
@@ -106,10 +119,13 @@ def rag_search(req: SearchRequest):
     # 유사도 내림차순 정렬
     scored.sort(key=lambda x: x[0], reverse=True)
 
+
+    displays = _display_scores([sim for sim, _ in scored])
+
     # Top-K (기본 20건)
     top_k = 20
     results = []
-    for sim, svc in scored[:top_k]:
+    for (sim, svc), display in zip(scored[:top_k], displays[:top_k]):
         result = {
             "source_type": svc.get("source_type"),
             "source_service_id": svc.get("source_service_id"),
@@ -127,7 +143,7 @@ def rag_search(req: SearchRequest):
             "support_categories": svc.get("support_categories") or [],
             "cancer_relevance": svc.get("cancer_relevance"),
             "cancer_relevance_reason": svc.get("cancer_relevance_reason"),
-            "similarity": round(sim, 4),
+            "similarity": round(display, 4),
         }
         results.append(result)
 
