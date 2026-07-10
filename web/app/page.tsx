@@ -61,15 +61,6 @@ function glyphOf(s: Service): string {
   return GLYPHS[s.support_categories[0]] ?? "🏥";
 }
 
-function HeartIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-      aria-hidden="true">
-      <path d="M12 20.5C6.5 16.5 3 13.2 3 9.2 3 6.6 5 4.7 7.4 4.7c1.6 0 3 .8 3.9 2 .9-1.2 2.3-2 3.9-2C18.6 4.7 21 6.6 21 9.2c0 4-3.5 7.3-9 11.3Z" />
-    </svg>
-  );
-}
-
 export default function Home() {
   // 탭 상태
   const [tab, setTab] = useState<"keyword" | "ai">("keyword");
@@ -100,8 +91,6 @@ export default function Home() {
   const [aiSigunguOptions, setAiSigunguOptions] = useState<string[]>([]);
 
   const [selected, setSelected] = useState<Service | null>(null);
-  // 저장(하트) — 클라이언트 표시 상태. Airbnb 위시리스트 하트의 번역.
-  const [saved, setSaved] = useState<Set<string>>(new Set());
   // 상세를 연 카드로 포커스를 되돌리기 위한 참조 (키보드 사용자 배려).
   const lastCardRef = useRef<HTMLElement | null>(null);
   // 개발/QA 전용 표시 모드. URL에 ?debug=1 이 있을 때만 분류 근거를 화면에 보여준다.
@@ -228,14 +217,6 @@ export default function Home() {
     lastCardRef.current?.focus();
   }
 
-  function toggleSave(k: string) {
-    setSaved((prev) => {
-      const next = new Set(prev);
-      next.has(k) ? next.delete(k) : next.add(k);
-      return next;
-    });
-  }
-
   async function handleAiSearch() {
     setAiLoading(true);
     setAiError("");
@@ -278,7 +259,6 @@ export default function Home() {
   function renderCard(s: Service, showSim: boolean) {
     const b = badge(s.cancer_relevance);
     const k = keyOf(s);
-    const isSaved = saved.has(k);
     return (
       <div
         key={k}
@@ -295,18 +275,6 @@ export default function Home() {
       >
         <div className="card-plate">
           <span className="card-glyph" aria-hidden="true">{glyphOf(s)}</span>
-          <button
-            type="button"
-            className="heart"
-            aria-pressed={isSaved}
-            aria-label={isSaved ? "저장 해제" : "저장"}
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleSave(k);
-            }}
-          >
-            <HeartIcon />
-          </button>
         </div>
         <h3>{s.title ?? "(제목 없음)"}</h3>
         {s.summary ? <p className="summary">{s.summary}</p> : null}
@@ -569,9 +537,10 @@ export default function Home() {
               ) : aiTotal > 0 ? (
                 <>
                   <div className="results-head">
+                    <span className="count-unit">일치율 상위</span>
                     <span className="count-num">{aiTotal.toLocaleString("ko-KR")}</span>
-                    <span className="count-unit">개 제도를 찾았어요</span>
-                    <span className="count-sub">유사도 높은 순</span>
+                    <span className="count-unit">개 제도를 보여드려요</span>
+                    <span className="count-sub">일치율 높은 순</span>
                   </div>
                   <div className="card-grid">
                     {aiResults.map((s) => renderCard(s, true))}
